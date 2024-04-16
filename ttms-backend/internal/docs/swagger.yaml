@@ -1,0 +1,668 @@
+basePath: /api/v1
+definitions:
+  common.State:
+    properties:
+      data:
+        description: 失败时返回空
+      status_code:
+        description: 状态码，0-成功，其他值-失败
+        type: integer
+      status_msg:
+        description: 返回状态描述
+        type: string
+    type: object
+  reply.LoginRly:
+    properties:
+      AccessToken:
+        type: string
+      Payload:
+        $ref: '#/definitions/token.Payload'
+      RefreshToken:
+        type: string
+      user_id:
+        type: integer
+      user_info:
+        $ref: '#/definitions/reply.UserInfoReply'
+    type: object
+  reply.RefreshRly:
+    properties:
+      AccessToken:
+        type: string
+    type: object
+  reply.RegisterRly:
+    properties:
+      user_id:
+        type: integer
+    type: object
+  reply.UserInfo:
+    properties:
+      avatar:
+        type: string
+      gender:
+        type: string
+      role:
+        type: string
+      signature:
+        type: string
+      username:
+        type: string
+    type: object
+  reply.UserInfoReply:
+    properties:
+      AvatarURL:
+        type: string
+      Role:
+        type: string
+      user_name:
+        type: string
+    type: object
+  reply.UserList:
+    properties:
+      total:
+        type: integer
+      user_infos:
+        items:
+          $ref: '#/definitions/reply.UserInfo'
+        type: array
+    type: object
+  request.FindParam:
+    properties:
+      UserName:
+        type: string
+    required:
+    - UserName
+    type: object
+  request.LoginParam:
+    properties:
+      Email:
+        type: string
+      EmailCode:
+        type: string
+      LoginType:
+        description: 1表示验证码登录，2表示密码登录
+        enum:
+        - 1
+        - 2
+        type: integer
+      Password:
+        description: 密码
+        type: string
+    required:
+    - Email
+    type: object
+  request.ModifyAvatar:
+    properties:
+      newAvatar:
+        type: string
+    required:
+    - newAvatar
+    type: object
+  request.RefreshTokenParam:
+    properties:
+      AccessToken:
+        type: string
+      RefreshToken:
+        type: string
+    required:
+    - AccessToken
+    - RefreshToken
+    type: object
+  request.RegisterParam:
+    properties:
+      Avatar:
+        description: 头像
+        type: string
+      Email:
+        description: 邮箱
+        type: string
+      EmailCode:
+        description: 邮箱验证码，长度为6
+        maxLength: 6
+        minLength: 6
+        type: string
+      Gender:
+        description: 性别
+        enum:
+        - male
+        - female
+        type: string
+      Password:
+        description: 密码长度介于3和12之间
+        maxLength: 12
+        minLength: 3
+        type: string
+      Signature:
+        description: 个性签名
+        type: string
+      UserName:
+        description: 用户名
+        type: string
+    required:
+    - Email
+    - EmailCode
+    - Password
+    - UserName
+    type: object
+  token.Payload:
+    properties:
+      content:
+        description: 可以是用户或者是账户
+        items:
+          type: integer
+        type: array
+      expired-at:
+        type: string
+      id:
+        description: 用于管理每个JWT
+        type: string
+      issued-at:
+        description: 创建时间用于检验
+        type: string
+    type: object
+host: 127.0.0.1
+info:
+  contact: {}
+  description: ttms影院管理系统
+  license: {}
+  title: ttms
+  version: "1.0"
+paths:
+  /api/v1/email/send:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - in: query
+        name: Email
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 1001:参数有误 1003:系统错误 2001:鉴权失败 20001:用户已存在 30002:发送次数过多
+          schema:
+            $ref: '#/definitions/common.State'
+      security:
+      - BasicAuth: []
+      summary: 发邮件
+      tags:
+      - email
+  /api/v1/file/send:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: x_token 用户令牌
+        in: header
+        name: x_token
+        required: true
+        type: string
+      - description: 文件
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '1001:参数有误 1003:系统错误 2001:鉴权失败 '
+          schema:
+            $ref: '#/definitions/common.State'
+      security:
+      - BasicAuth: []
+      summary: 上传文件
+      tags:
+      - file
+  /api/v1/isRePeat:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - in: query
+        name: Username
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 1001:参数有误 1003:系统错误 2001:鉴权失败 20001:用户已存在 20002:用户不存在
+          schema:
+            $ref: '#/definitions/common.State'
+      security:
+      - BasicAuth: []
+      summary: 判断用户名是否存在
+      tags:
+      - user
+  /api/v1/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 登录
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/request.LoginParam'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 1001:参数有误 1003:系统错误 30001:验证码失效或者有误 20003：密码不能为空
+          schema:
+            allOf:
+            - $ref: '#/definitions/common.State'
+            - properties:
+                data:
+                  $ref: '#/definitions/reply.LoginRly'
+              type: object
+      security:
+      - BasicAuth: []
+      summary: 登录
+      tags:
+      - user
+  /api/v1/manager/list/:page:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: x_token 用户令牌
+        in: header
+        name: x_token
+        required: true
+        type: string
+      - description: 页码
+        in: path
+        name: page
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 1001:参数有误 1003:系统错误 2001:鉴权失败 30004:权限不够 30005:无相关记录
+          schema:
+            allOf:
+            - $ref: '#/definitions/common.State'
+            - properties:
+                data:
+                  $ref: '#/definitions/reply.UserList'
+              type: object
+      security:
+      - BasicAuth: []
+      summary: 获取用户列表
+      tags:
+      - FuncMgr
+  /api/v1/movie/create:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: x_token 用户令牌
+        in: header
+        name: x_token
+        required: true
+        type: string
+      - description: 演员
+        in: query
+        items:
+          type: string
+        minItems: 1
+        name: actors
+        required: true
+        type: array
+      - description: 地区
+        in: query
+        maxLength: 20
+        minLength: 1
+        name: area
+        required: true
+        type: string
+      - in: query
+        name: avatar
+        type: string
+      - in: query
+        minLength: 1
+        name: content
+        required: true
+        type: string
+      - description: 导演
+        in: query
+        maxLength: 5
+        name: director
+        required: true
+        type: string
+      - description: 时长(分钟)
+        in: query
+        minimum: 1
+        name: duration
+        required: true
+        type: integer
+      - description: 电影名称
+        in: query
+        maxLength: 20
+        minLength: 1
+        name: name
+        required: true
+        type: string
+      - description: 上映时间戳
+        in: query
+        name: show_time
+        required: true
+        type: integer
+      - description: 电影标签
+        in: query
+        items:
+          type: string
+        name: tags
+        required: true
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 1001:参数有误 1003:系统错误 2001:鉴权失败 20001:用户已存在 30002:发送次数过多
+          schema:
+            $ref: '#/definitions/common.State'
+      security:
+      - BasicAuth: []
+      summary: 创建电影
+      tags:
+      - movie
+  /api/v1/movie/delete:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: x_token 用户令牌
+        in: header
+        name: x_token
+        required: true
+        type: string
+      - in: query
+        name: movie_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 1001:参数有误 1003:系统错误 2001:鉴权失败
+          schema:
+            $ref: '#/definitions/common.State'
+      security:
+      - BasicAuth: []
+      summary: 删除电影(不能删除在演出计划里面的)
+      tags:
+      - movie
+  /api/v1/movie/detail:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: x_token 用户令牌
+        in: header
+        name: x_token
+        required: true
+        type: string
+      - in: query
+        name: movieID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '1001:参数有误 1003:系统错误 2001:鉴权失败 '
+          schema:
+            $ref: '#/definitions/common.State'
+      security:
+      - BasicAuth: []
+      summary: 获取电影详细信息
+      tags:
+      - movie
+  /api/v1/refreshToken:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 刷新
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/request.RefreshTokenParam'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 1001:参数有误 1003:系统错误 2001:鉴权失败 30003:refresh token失效
+          schema:
+            allOf:
+            - $ref: '#/definitions/common.State'
+            - properties:
+                data:
+                  $ref: '#/definitions/reply.RefreshRly'
+              type: object
+      security:
+      - BasicAuth: []
+      summary: 刷新token
+      tags:
+      - user
+  /api/v1/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 注册
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/request.RegisterParam'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '1001:参数有误 1003:系统错误 20001:用户已存在 '
+          schema:
+            allOf:
+            - $ref: '#/definitions/common.State'
+            - properties:
+                data:
+                  $ref: '#/definitions/reply.RegisterRly'
+              type: object
+      security:
+      - BasicAuth: []
+      summary: 注册
+      tags:
+      - user
+  /api/v1/user/findUser:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: x_token 用户令牌
+        in: header
+        name: x_token
+        required: true
+        type: string
+      - description: 刷新
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/request.FindParam'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 1001:参数有误 1003:系统错误 20002:用户不存在
+          schema:
+            allOf:
+            - $ref: '#/definitions/common.State'
+            - properties:
+                data:
+                  $ref: '#/definitions/reply.UserInfo'
+              type: object
+      security:
+      - BasicAuth: []
+      summary: 根据用户名查找用户
+      tags:
+      - user
+  /api/v1/user/modifyAvatar:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: x_token 用户令牌
+        in: header
+        name: x_token
+        required: true
+        type: string
+      - in: query
+        name: newAvatar
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 1001:参数有误 1003:系统错误  20002:用户不存在
+          schema:
+            allOf:
+            - $ref: '#/definitions/common.State'
+            - properties:
+                data:
+                  $ref: '#/definitions/request.ModifyAvatar'
+              type: object
+      security:
+      - BasicAuth: []
+      summary: 用户修改头像
+      tags:
+      - user
+  /api/v1/user/modifyEmail:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: x_token 用户令牌
+        in: header
+        name: x_token
+        required: true
+        type: string
+      - in: query
+        maxLength: 6
+        minLength: 6
+        name: EmailCode
+        required: true
+        type: string
+      - in: query
+        name: NewEmail
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 1001:参数有误 1003:系统错误  20002:用户不存在 30001:验证码有误
+          schema:
+            $ref: '#/definitions/common.State'
+      security:
+      - BasicAuth: []
+      summary: 用户修改头像
+      tags:
+      - user
+  /api/v1/user/modifyPassword:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: x_token 用户令牌
+        in: header
+        name: x_token
+        required: true
+        type: string
+      - in: query
+        maxLength: 6
+        minLength: 6
+        name: EmailCode
+        required: true
+        type: string
+      - in: query
+        name: NewPassword
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 1001:参数有误 1003:系统错误  20002:用户不存在 30001:验证码有误
+          schema:
+            $ref: '#/definitions/common.State'
+      security:
+      - BasicAuth: []
+      summary: 用户修改密码
+      tags:
+      - user
+  /api/v1/user/update:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: x_token 用户令牌
+        in: header
+        name: x_token
+        required: true
+        type: string
+      - in: query
+        name: userID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 1001:参数有误 1003:系统错误  20002:用户不存在
+          schema:
+            $ref: '#/definitions/common.State'
+      security:
+      - BasicAuth: []
+      summary: 管理员删除用户
+      tags:
+      - FuncMgr
+  /api/v1/user/updateInfo:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: x_token 用户令牌
+        in: header
+        name: x_token
+        required: true
+        type: string
+      - in: query
+        name: gender
+        type: string
+      - in: query
+        name: signature
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 1001:参数有误 1003:系统错误  20002:用户不存在
+          schema:
+            $ref: '#/definitions/common.State'
+      security:
+      - BasicAuth: []
+      summary: 用户修改性别,个性签名
+      tags:
+      - user
+securityDefinitions:
+  BasicAuth:
+    type: basic
+swagger: "2.0"
